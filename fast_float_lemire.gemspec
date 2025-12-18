@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative 'lib/fast_float_lemire/version'
+
 Gem::Specification.new do |spec|
   spec.name          = 'fast_float_lemire'
-  spec.version       = '0.1.0'
+  spec.version       = FastFloatLemire::VERSION
   spec.authors       = ['Maciej Mensfeld']
   spec.email         = ['maciej@mensfeld.pl']
 
@@ -19,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.homepage      = 'https://github.com/mensfeld/fast_float_lemire'
   spec.license       = 'MIT'
 
-  spec.required_ruby_version = '>= 3.0.0'
+  spec.required_ruby_version = '>= 3.2.0'
 
   spec.files         = Dir['lib/**/*', 'ext/**/*', 'README.md', 'LICENSE.txt']
   spec.require_paths = ['lib']
