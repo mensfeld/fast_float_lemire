@@ -4,7 +4,7 @@ Gem::Specification.new do |spec|
   spec.name          = 'fast_float_lemire'
   spec.version       = '0.1.0'
   spec.authors       = ['Maciej Mensfeld']
-  spec.email         = ['contact@mensfeld.pl']
+  spec.email         = ['maciej@mensfeld.pl']
 
   spec.summary       = 'Eisel-Lemire algorithm for fast string-to-float conversion'
   spec.description   = <<~DESC

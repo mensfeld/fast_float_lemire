@@ -1,5 +1,0 @@
---readme README.md
---title 'FastFloatLemire Documentation'
---charset utf-8
---markup markdown
-lib/**/*.rb
