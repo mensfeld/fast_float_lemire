@@ -1,0 +1,38 @@
+name: Push Gem
+
+on:
+  push:
+    tags:
+      - v*
+
+permissions:
+  contents: read
+
+jobs:
+  push:
+    if: github.repository_owner == 'mensfeld'
+    runs-on: ubuntu-latest
+    environment: deployment
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@a4effe49ee8ee5b8b5091268c473a4628afb5651
+        with:
+          ruby-version: '3.4'
+          bundler-cache: false
+
+      - name: Bundle install
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Compile C extension
+        run: bundle exec rake compile
+
+      - uses: rubygems/release-gem@612653d273a73bdae1df8453e090060bb4db5f31

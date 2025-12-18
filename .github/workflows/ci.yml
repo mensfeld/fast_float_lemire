@@ -1,0 +1,77 @@
+name: ci
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+  schedule:
+    - cron: '0 1 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  specs:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby:
+          - '4.0.0-preview2'
+          - '3.4'
+          - '3.3'
+          - '3.2'
+        include:
+          - ruby: '3.4'
+            coverage: 'true'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@a4effe49ee8ee5b8b5091268c473a4628afb5651
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      - name: Compile C extension
+        run: bundle exec rake compile
+
+      - name: Run tests
+        env:
+          GITHUB_COVERAGE: ${{ matrix.coverage }}
+        run: bundle exec rake test
+
+  coditsu:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Run Coditsu
+        run: \curl -sSL https://api.coditsu.io/run/ci | bash
+
+  ci-success:
+    name: ci
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - specs
+      - coditsu
+    steps:
+      - name: All checks passed
+        if: |
+          contains(needs.*.result, 'failure') ||
+          contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - run: echo "All CI checks passed!"
