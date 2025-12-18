@@ -23,12 +23,13 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = '>= 3.2.0'
 
-  spec.files         = Dir['lib/**/*', 'ext/**/*', 'README.md', 'LICENSE.txt']
+  spec.files         = Dir['lib/**/*', 'ext/**/*', 'CHANGELOG.md', 'README.md', 'LICENSE.txt']
   spec.require_paths = ['lib']
   spec.extensions    = ['ext/fast_float_lemire/extconf.rb']
 
   spec.metadata = {
     'homepage_uri' => spec.homepage,
+    'changelog_uri' => "#{spec.homepage}/blob/master/CHANGELOG.md",
     'source_code_uri' => spec.homepage,
     'documentation_uri' => spec.homepage,
     'rubygems_mfa_required' => 'true'
