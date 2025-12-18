@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require_relative "fast_float_lemire/version"
-require_relative "fast_float_lemire/fast_float_lemire"
+require_relative 'fast_float_lemire/version'
+require_relative 'fast_float_lemire/fast_float_lemire'
 
 # Eisel-Lemire algorithm for fast string-to-float conversion.
 #
@@ -21,6 +21,7 @@ require_relative "fast_float_lemire/fast_float_lemire"
 #
 # @see https://arxiv.org/abs/2101.11408 Eisel-Lemire paper
 module FastFloatLemire
+  # Base error class for FastFloatLemire exceptions.
   class Error < StandardError; end
 
   # Methods parse() and parse_array() are defined in the C extension

@@ -61,6 +61,36 @@ jobs:
       - name: Run Coditsu
         run: \curl -sSL https://api.coditsu.io/run/ci | bash
 
+  rubocop:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@a4effe49ee8ee5b8b5091268c473a4628afb5651
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - name: Run RuboCop
+        run: bundle exec rubocop
+
+  yard-lint:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@a4effe49ee8ee5b8b5091268c473a4628afb5651
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+      - name: Run yard-lint
+        run: bundle exec yard-lint lib/
+
   ci-success:
     name: ci
     runs-on: ubuntu-latest
@@ -68,6 +98,8 @@ jobs:
     needs:
       - specs
       - coditsu
+      - rubocop
+      - yard-lint
     steps:
       - name: All checks passed
         if: |

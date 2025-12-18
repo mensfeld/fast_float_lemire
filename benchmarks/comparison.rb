@@ -15,15 +15,15 @@ def bench(name, strings)
   strings = strings.map(&:to_s)
 
   # Warm up
-  100.times { strings.each { |s| s.to_f } }
+  100.times { strings.each(&:to_f) }
   100.times { strings.each { |s| FastFloatLemire.parse(s) } }
 
   puts "\n#{name}:"
-  puts "  Sample: #{strings.first(3).join(', ')}#{strings.size > 3 ? '...' : ''}"
+  puts "  Sample: #{strings.first(3).join(', ')}#{'...' if strings.size > 3}"
 
   Benchmark.bm(20) do |x|
     x.report('String#to_f') do
-      (ITERATIONS / strings.size).times { strings.each { |s| s.to_f } }
+      (ITERATIONS / strings.size).times { strings.each(&:to_f) }
     end
 
     x.report('FastFloatLemire') do
@@ -53,7 +53,7 @@ bench('High precision decimals',
          2.222222222222222 3.333333333333333 4.444444444444444
          5.555555555555555 6.666666666666666 7.777777777777777 8.888888888888888])
 
-puts "\n" + '=' * 60
+puts "\n#{'=' * 60}"
 puts 'CONCLUSION:'
 puts '  - FastFloatLemire is ~2-3x FASTER for complex numbers (10+ digits)'
 puts '  - FastFloatLemire is ~5-10% SLOWER for simple numbers'
