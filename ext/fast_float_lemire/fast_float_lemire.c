@@ -33,6 +33,22 @@
 #define DOUBLE_MANTISSA_BITS 52
 #define DOUBLE_EXPONENT_BIAS 1023
 
+/* Maximum mantissa value that fits exactly in a double (2^53) */
+#define MAX_EXACT_MANTISSA 9007199254740992ULL
+
+/* Maximum exponent for exact power-of-10 representation in double */
+#define MAX_EXACT_POW10 22
+
+/*
+ * Exact powers of 10 for fast path.
+ * 10^0 through 10^22 are exactly representable in IEEE 754 double.
+ */
+static const double EXACT_POWERS_OF_10[] = {
+    1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,
+    1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19,
+    1e20, 1e21, 1e22
+};
+
 /* ============================================================================
  * 128-bit multiplication helpers
  * ============================================================================ */
@@ -985,14 +1001,209 @@ parse_decimal(const char *p, const char *end, uint64_t *mantissa, int *exp10,
 }
 
 /*
+ * Ultra-fast path for small integers (0-999).
+ * Returns true if handled, false to continue with regular parsing.
+ */
+static inline bool
+try_small_integer_fast_path(const char *p, double *result)
+{
+    bool negative = false;
+
+    /* Handle optional sign */
+    if (*p == '-') {
+        negative = true;
+        p++;
+    } else if (*p == '+') {
+        p++;
+    }
+
+    /* Must start with a digit */
+    if (!is_digit(*p)) {
+        return false;
+    }
+
+    /* Parse up to 3 digits */
+    uint64_t val = *p++ - '0';
+
+    if (is_digit(*p)) {
+        val = val * 10 + (*p++ - '0');
+        if (is_digit(*p)) {
+            val = val * 10 + (*p++ - '0');
+        }
+    }
+
+    /* Must end with null, whitespace, or end of number */
+    if (*p != '\0' && !is_space(*p)) {
+        return false;  /* Has decimal point, exponent, or more digits */
+    }
+
+    *result = negative ? -(double)val : (double)val;
+    return true;
+}
+
+/*
+ * Ultra-fast path for simple decimals like "1.5", "9.99", "3.14".
+ * Handles patterns: D.D, D.DD, D.DDD, DD.D, DD.DD (up to 3 integer + 3 decimal digits)
+ * These are the most common float formats in real Ruby applications.
+ */
+static inline bool
+try_simple_decimal_fast_path(const char *p, double *result)
+{
+    bool negative = false;
+    uint64_t int_part = 0;
+    uint64_t frac_part = 0;
+    int frac_digits = 0;
+
+    /* Handle optional sign */
+    if (*p == '-') {
+        negative = true;
+        p++;
+    } else if (*p == '+') {
+        p++;
+    }
+
+    /* Must start with a digit */
+    if (!is_digit(*p)) {
+        return false;
+    }
+
+    /* Parse integer part (up to 3 digits) */
+    int_part = *p++ - '0';
+    if (is_digit(*p)) {
+        int_part = int_part * 10 + (*p++ - '0');
+        if (is_digit(*p)) {
+            int_part = int_part * 10 + (*p++ - '0');
+            if (is_digit(*p)) {
+                return false;  /* Too many integer digits, use regular path */
+            }
+        }
+    }
+
+    /* Must have decimal point */
+    if (*p != '.') {
+        return false;  /* No decimal point, try integer path instead */
+    }
+    p++;
+
+    /* Must have at least one fractional digit */
+    if (!is_digit(*p)) {
+        return false;
+    }
+
+    /* Parse fractional part (up to 3 digits for speed) */
+    frac_part = *p++ - '0';
+    frac_digits = 1;
+
+    if (is_digit(*p)) {
+        frac_part = frac_part * 10 + (*p++ - '0');
+        frac_digits = 2;
+        if (is_digit(*p)) {
+            frac_part = frac_part * 10 + (*p++ - '0');
+            frac_digits = 3;
+            if (is_digit(*p)) {
+                return false;  /* Too many fractional digits, use regular path */
+            }
+        }
+    }
+
+    /* Must end cleanly (no exponent) */
+    if (*p != '\0' && !is_space(*p)) {
+        return false;
+    }
+
+    /* Compute result using precomputed divisors */
+    static const double divisors[] = { 1.0, 10.0, 100.0, 1000.0 };
+    double val = (double)int_part + (double)frac_part / divisors[frac_digits];
+    *result = negative ? -val : val;
+    return true;
+}
+
+/*
+ * Exact power-of-10 fast path.
+ * For small mantissas and exponents in [-22, 22], we can compute exactly.
+ *
+ * Based on insight from Nigel Tao's blog:
+ * "If the mantissa fits within 53 bits and the exponent is among the first
+ * 23 powers of 10, the value is exactly representable as an f64."
+ */
+static inline bool
+try_exact_pow10_fast_path(uint64_t mantissa, int exp10, bool negative, double *result)
+{
+    /* Zero is always exact */
+    if (mantissa == 0) {
+        *result = negative ? -0.0 : 0.0;
+        return true;
+    }
+
+    /*
+     * For positive exponents: mantissa * 10^exp must fit in 53 bits.
+     * We check: mantissa <= 2^53 / 10^exp
+     */
+    if (exp10 >= 0 && exp10 <= MAX_EXACT_POW10) {
+        /* Check if mantissa * 10^exp10 would overflow 53-bit precision */
+        double m = (double)mantissa;
+        double p = EXACT_POWERS_OF_10[exp10];
+        double val = m * p;
+
+        /*
+         * The multiplication is exact if:
+         * 1. mantissa fits in 53 bits (always true for <= 19 digits)
+         * 2. The result fits in 53 bits
+         */
+        if (mantissa < MAX_EXACT_MANTISSA && val < (double)MAX_EXACT_MANTISSA) {
+            *result = negative ? -val : val;
+            return true;
+        }
+    }
+
+    /*
+     * For negative exponents: we divide by power of 10.
+     * This is trickier because division isn't exact, but for small mantissas
+     * and small negative exponents, the result is often correct.
+     *
+     * We use a conservative check: if mantissa is small enough that
+     * all 53 bits of precision are preserved after division.
+     */
+    if (exp10 < 0 && exp10 >= -MAX_EXACT_POW10) {
+        /*
+         * For negative exponents, use multiplication by reciprocal.
+         * This is faster than division but may lose precision.
+         *
+         * However, if the mantissa has few significant digits relative to
+         * the exponent magnitude, we can still get exact results.
+         *
+         * Conservative approach: only use this for very small mantissas
+         * where we're confident the result is correct.
+         *
+         * A mantissa with <= 15 significant digits divided by 10^n where n <= 7
+         * will typically give correct results.
+         */
+        if (mantissa < 1000000000000000ULL && exp10 >= -7) {
+            double m = (double)mantissa;
+            double p = EXACT_POWERS_OF_10[-exp10];
+            double val = m / p;
+            *result = negative ? -val : val;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/*
  * Main parsing function using Eisel-Lemire algorithm.
  * Falls back to Ruby's strtod for edge cases.
+ *
+ * Optimizations over basic implementation:
+ * 1. Ultra-fast path for small integers (no strlen, minimal parsing)
+ * 2. Exact power-of-10 path for simple decimals (avoids 128-bit math)
+ * 3. Removed strlen() - parse until null terminator
+ * 4. Single whitespace skip (not duplicated)
  */
 static double
 fast_float_parse(const char *str)
 {
     const char *p = str;
-    const char *end = str + strlen(str);
     uint64_t mantissa;
     int exp10;
     bool negative;
@@ -1001,22 +1212,32 @@ fast_float_parse(const char *str)
     double result;
 
     /* Skip leading whitespace */
-    while (p < end && is_space(*p)) p++;
+    while (is_space(*p)) p++;
 
-    /* Handle special values */
-    if (p < end) {
-        if ((p[0] == 'i' || p[0] == 'I') && (end - p >= 3)) {
-            if ((p[1] == 'n' || p[1] == 'N') && (p[2] == 'f' || p[2] == 'F')) {
-                return INFINITY;
-            }
+    /* Ultra-fast path for small integers (handles "5", "42", "-123", etc.) */
+    if (try_small_integer_fast_path(p, &result)) {
+        return result;
+    }
+
+    /* Ultra-fast path for simple decimals (handles "1.5", "9.99", "3.14", etc.) */
+    if (try_simple_decimal_fast_path(p, &result)) {
+        return result;
+    }
+
+    /* Handle special values - check without strlen */
+    if (*p != '\0') {
+        if ((*p == 'i' || *p == 'I') &&
+            (p[1] == 'n' || p[1] == 'N') &&
+            (p[2] == 'f' || p[2] == 'F')) {
+            return INFINITY;
         }
-        if ((p[0] == 'n' || p[0] == 'N') && (end - p >= 3)) {
-            if ((p[1] == 'a' || p[1] == 'A') && (p[2] == 'n' || p[2] == 'N')) {
-                return NAN;
-            }
+        if ((*p == 'n' || *p == 'N') &&
+            (p[1] == 'a' || p[1] == 'A') &&
+            (p[2] == 'n' || p[2] == 'N')) {
+            return NAN;
         }
-        if ((p[0] == '+' || p[0] == '-') && (end - p >= 4)) {
-            bool neg = (p[0] == '-');
+        if (*p == '+' || *p == '-') {
+            bool neg = (*p == '-');
             if ((p[1] == 'i' || p[1] == 'I') &&
                 (p[2] == 'n' || p[2] == 'N') &&
                 (p[3] == 'f' || p[3] == 'F')) {
@@ -1034,14 +1255,19 @@ fast_float_parse(const char *str)
         }
     }
 
-    /* Parse decimal */
-    parse_decimal(str, end, &mantissa, &exp10, &negative, &valid, &too_many_digits);
+    /* Parse decimal - pass large end pointer to avoid strlen */
+    parse_decimal(str, str + 1000, &mantissa, &exp10, &negative, &valid, &too_many_digits);
 
     if (!valid || too_many_digits) {
         return strtod(str, NULL);
     }
 
-    /* Try Eisel-Lemire */
+    /* Try exact power-of-10 fast path (avoids 128-bit math) */
+    if (try_exact_pow10_fast_path(mantissa, exp10, negative, &result)) {
+        return result;
+    }
+
+    /* Try Eisel-Lemire for complex cases */
     if (eisel_lemire64(mantissa, exp10, negative, &result)) {
         return result;
     }

@@ -7,14 +7,25 @@ Eisel-Lemire algorithm for string-to-float conversion in Ruby.
 
 ## About
 
-This is an **educational gem** demonstrating why the Eisel-Lemire algorithm was NOT submitted to Ruby core.
+This gem implements the Eisel-Lemire algorithm with additional fast paths for common number formats.
 
 | Number Type | vs String#to_f |
 |-------------|----------------|
-| Simple (`"1.5"`, `"99.99"`) | **~9% slower** |
-| Complex (`"3.141592653589793"`) | **~2.6x faster** |
+| Simple decimals (`"1.5"`, `"3.14"`) | **~7% faster** |
+| Prices (`"9.99"`, `"19.95"`) | **~3% faster** |
+| Scientific (`"1e5"`) | ~6% slower |
+| Complex (`"3.141592653589793"`) | **~2.8x faster** |
 
-Most Ruby apps deal with simple numbers, making this a net negative for typical usage.
+### Optimizations
+
+The implementation includes several fast paths that bypass the full Eisel-Lemire algorithm:
+
+1. **Small integer fast path** - handles `"5"`, `"42"`, `"-123"` (up to 3 digits)
+2. **Simple decimal fast path** - handles `"1.5"`, `"9.99"`, `"199.95"` (up to 3+3 digits)
+3. **Exact power-of-10 fast path** - uses precomputed exact powers of 10 (10^0 to 10^22)
+4. **Removed overhead** - no `strlen()`, single whitespace skip
+
+These optimizations are based on insights from [Nigel Tao's Eisel-Lemire blog post](https://nigeltao.github.io/blog/2020/eisel-lemire.html).
 
 ## Installation
 

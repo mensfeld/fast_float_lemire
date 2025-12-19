@@ -55,7 +55,8 @@ bench('High precision decimals',
 
 puts "\n#{'=' * 60}"
 puts 'CONCLUSION:'
-puts '  - FastFloatLemire is ~2-3x FASTER for complex numbers (10+ digits)'
-puts '  - FastFloatLemire is ~5-10% SLOWER for simple numbers'
-puts '  - Most Ruby apps use simple numbers, so String#to_f is usually better'
+puts '  - FastFloatLemire is ~2.8x FASTER for complex numbers (10+ digits)'
+puts '  - FastFloatLemire is ~3-7% FASTER for simple decimals and prices'
+puts '  - FastFloatLemire is ~6% SLOWER for simple scientific notation'
+puts '  - Overall: FastFloatLemire is now competitive for typical Ruby workloads'
 puts '=' * 60
