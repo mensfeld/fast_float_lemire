@@ -35,4 +35,4 @@ jobs:
       - name: Compile C extension
         run: bundle exec rake compile
 
-      - uses: rubygems/release-gem@612653d273a73bdae1df8453e090060bb4db5f31
+      - uses: rubygems/release-gem@1c162a739e8b4cb21a676e97b087e8268d8fc40b
