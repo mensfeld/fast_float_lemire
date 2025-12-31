@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         ruby:
-          - '4.0.0-preview2'
+          - '4.0.0'
           - '3.4'
           - '3.3'
           - '3.2'
@@ -59,7 +59,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@ed55d55e820a01da7d3e4863a8c51a61d73c3228 # v1.274.0
         with:
-          ruby-version: '3.4.8'
+          ruby-version: '4.0.0'
           bundler-cache: true
       - name: Run RuboCop
         run: bundle exec rubocop
@@ -74,7 +74,7 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@ed55d55e820a01da7d3e4863a8c51a61d73c3228 # v1.274.0
         with:
-          ruby-version: '3.4.8'
+          ruby-version: '4.0.0'
           bundler-cache: true
       - name: Run yard-lint
         run: bundle exec yard-lint lib/
