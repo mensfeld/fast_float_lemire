@@ -2,6 +2,7 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "includePaths": [
+    ".ruby-version",
     "Gemfile",
     "fast_float_lemire.gemspec",
     ".github/workflows/**"
