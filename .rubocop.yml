@@ -2,14 +2,7 @@ AllCops:
   NewCops: enable
 
   Exclude:
-    - bin/**/*
-    - db/schema.rb
-    - .gemspec/**/*
-    - .bundle/**/*
     - vendor/**/*
-    - db/migrate/**/*
-    - '**/dummy**/*'
-    - !ruby/regexp /old_and_unused\.rb$/
 
 Metrics/ClassLength:
   CountComments: false

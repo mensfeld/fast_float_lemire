@@ -10,10 +10,9 @@ AllValidators:
 
   # Global file exclusion patterns
   Exclude:
-    - '\.git'
+    - '.git/**/*'
     - 'vendor/**/*'
     - 'node_modules/**/*'
-    - 'spec/**/*'
     - 'test/**/*'
 
   # Exit code behavior (error, warning, convention, never)
