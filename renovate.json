@@ -5,7 +5,8 @@
     ".ruby-version",
     "Gemfile",
     "fast_float_lemire.gemspec",
-    ".github/workflows/**"
+    ".github/workflows/**",
+    "package.json"
   ],
   "packageRules": [
     {
