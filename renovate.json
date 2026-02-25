@@ -1,6 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": [
+    "config:recommended"
+  ],
   "includePaths": [
     ".ruby-version",
     "Gemfile",
@@ -10,11 +12,15 @@
   ],
   "packageRules": [
     {
-      "matchManagers": ["bundler"],
+      "matchManagers": [
+        "bundler"
+      ],
       "minimumReleaseAge": "7 days"
     },
     {
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "pinDigests": true
     },
     {
@@ -25,5 +31,6 @@
       ],
       "groupName": "ruby setup"
     }
-  ]
+  ],
+  "minimumReleaseAge": "7 days"
 }
