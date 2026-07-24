@@ -84,14 +84,22 @@ Documentation/UnderfilledLines:
   Severity: error
   # Aligned with RuboCop's Layout/LineLength so documentation prose wraps to the same
   # width as code.
-  MaxLength: 99
+  MaxLength: 100
 
 Documentation/LineLength:
   Description: Detects documentation lines that exceed the maximum length.
   Enabled: true
   Severity: error
   # Aligned with RuboCop's Layout/LineLength.
-  MaxLength: 99
+  MaxLength: 100
+
+Documentation/TextSubstitution:
+  Description: Detects em/en-dashes in documentation and replaces them with hyphens.
+  Enabled: true
+  Severity: error
+  Substitutions:
+    "—": "-"    # em-dash (U+2014)
+    "–": "-"    # en-dash (U+2013)
 
 # Tags validators
 Tags/Order:
