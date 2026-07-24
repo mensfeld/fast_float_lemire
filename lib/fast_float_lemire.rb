@@ -9,9 +9,7 @@ require_relative 'fast_float_lemire/fast_float_lemire'
 # significantly faster for numbers with many significant digits (like Pi),
 # but slightly slower for simple numbers (like "1.5").
 #
-# @note This is an EDUCATIONAL gem demonstrating why this algorithm was
-#   NOT submitted to Ruby core - it regresses performance on simple numbers
-#   which are the common case in typical Ruby applications.
+# @see https://arxiv.org/abs/2101.11408 Eisel-Lemire paper
 #
 # @example Basic usage
 #   FastFloatLemire.parse("3.141592653589793")  #=> 3.141592653589793
@@ -19,7 +17,9 @@ require_relative 'fast_float_lemire/fast_float_lemire'
 # @example Bulk parsing
 #   FastFloatLemire.parse_array(["1.5", "3.14159", "2.71828"])
 #
-# @see https://arxiv.org/abs/2101.11408 Eisel-Lemire paper
+# @note This is an EDUCATIONAL gem demonstrating why this algorithm was
+#   NOT submitted to Ruby core - it regresses performance on simple numbers
+#   which are the common case in typical Ruby applications.
 module FastFloatLemire
   # Base error class for FastFloatLemire exceptions.
   class Error < StandardError; end
